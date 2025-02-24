@@ -1,5 +1,37 @@
 import * as PIXI from 'pixi.js';
 
+// Constants for bank generation
+const BANK_CONFIG = {
+    // Variation in edge point positions (% of screen width)
+    EDGE_VARIATION: 0.1,
+    // Buffer from corners (% of screen width)
+    CORNER_BUFFER: 0.05,
+    // Min and max points per edge
+    MIN_EDGE_POINTS: 8,
+    MAX_EDGE_POINTS: 12,
+    // Distance from corners to remove points (% of screen width)
+    CORNER_THRESHOLD: 0.02,
+    // Base color for bank
+    BASE_COLOR: 0x345511,
+    // Grass colors
+    GRASS_COLORS: [
+        0x345511, // Base green
+        0x4A7A1E, // Lighter green
+        0x2D4A0F, // Darker green
+        0x5C8A32, // Olive green
+        0x3B6619  // Forest green
+    ],
+    // Grass properties
+    GRASS: {
+        DENSITY_FACTOR: 0.01, // Lower = more dense
+        MIN_HEIGHT: 0.003, // % of screen height
+        MAX_HEIGHT: 0.007, // % of screen height
+        MIN_ANGLE: -0.2,
+        MAX_ANGLE: 0.2,
+        OPACITY: 0.8
+    }
+};
+
 // Generate points for each edge
 const generateEdgePoints = (start, end, minCount, maxCount, variation) => {
     const count = Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount;
@@ -50,28 +82,61 @@ const isInsidePond = (x, y, allEdgePoints) => {
 
 
 const createBank = (app, bankThickness) => {
+    const screenWidth = app.screen.width;
+    const screenHeight = app.screen.height;
+    const minScreenDim = Math.min(screenWidth, screenHeight);
+
+    // Calculate actual values based on screen size
+    const variation = minScreenDim * BANK_CONFIG.EDGE_VARIATION;
+    const cornerBuffer = minScreenDim * BANK_CONFIG.CORNER_BUFFER;
+    const cornerThreshold = minScreenDim * BANK_CONFIG.CORNER_THRESHOLD;
+
     const bank = new PIXI.Graphics();
-    bank.beginFill(0x345511); // Brown color for the bank
-    bank.drawRect(0, 0, app.screen.width, app.screen.height); // Outer bank
+    bank.beginFill(BANK_CONFIG.BASE_COLOR);
+    bank.drawRect(0, 0, screenWidth, screenHeight);
     bank.zIndex = 10;
     bank.beginHole();
 
-    const variation = 100;
-    const cornerBuffer = 50;
+    // Generate edge points
+    const edges = {
+        top: generateEdgePoints(
+            { x: bankThickness + cornerBuffer, y: bankThickness },
+            { x: screenWidth - bankThickness - cornerBuffer, y: bankThickness },
+            BANK_CONFIG.MIN_EDGE_POINTS,
+            BANK_CONFIG.MAX_EDGE_POINTS,
+            variation
+        ),
+        right: generateEdgePoints(
+            { x: screenWidth - bankThickness, y: bankThickness + cornerBuffer },
+            { x: screenWidth - bankThickness, y: screenHeight - bankThickness - cornerBuffer },
+            BANK_CONFIG.MIN_EDGE_POINTS,
+            BANK_CONFIG.MAX_EDGE_POINTS,
+            variation
+        ),
+        bottom: generateEdgePoints(
+            { x: screenWidth - bankThickness - cornerBuffer, y: screenHeight - bankThickness },
+            { x: bankThickness + cornerBuffer, y: screenHeight - bankThickness },
+            BANK_CONFIG.MIN_EDGE_POINTS,
+            BANK_CONFIG.MAX_EDGE_POINTS,
+            variation
+        ),
+        left: generateEdgePoints(
+            { x: bankThickness, y: screenHeight - bankThickness - cornerBuffer },
+            { x: bankThickness, y: bankThickness + cornerBuffer },
+            BANK_CONFIG.MIN_EDGE_POINTS,
+            BANK_CONFIG.MAX_EDGE_POINTS,
+            variation
+        )
+    };
 
-    const topEdgePoints = generateEdgePoints({ x: bankThickness + cornerBuffer, y: bankThickness }, { x: app.screen.width - bankThickness - cornerBuffer, y: bankThickness }, 8, 12, variation);
-    const rightEdgePoints = generateEdgePoints({ x: app.screen.width - bankThickness, y: bankThickness + cornerBuffer }, { x: app.screen.width, y: app.screen.height - bankThickness - cornerBuffer }, 8, 12, variation);
-    const bottomEdgePoints = generateEdgePoints({ x: app.screen.width - bankThickness - cornerBuffer, y: app.screen.height - bankThickness }, { x: bankThickness + cornerBuffer, y: app.screen.height - bankThickness }, 8, 12, variation);
-    const leftEdgePoints = generateEdgePoints({ x: bankThickness, y: app.screen.height - bankThickness - cornerBuffer }, { x: bankThickness, y: bankThickness + cornerBuffer }, 8, 12, variation);
-
-    const threshold = 20;
     const allEdgePoints = [
-        ...removeCloseToCorners(topEdgePoints, threshold, bankThickness, app),
-        ...removeCloseToCorners(rightEdgePoints, threshold, bankThickness, app),
-        ...removeCloseToCorners(bottomEdgePoints, threshold, bankThickness, app),
-        ...removeCloseToCorners(leftEdgePoints, threshold, bankThickness, app)
+        ...removeCloseToCorners(edges.top, cornerThreshold, bankThickness, app),
+        ...removeCloseToCorners(edges.right, cornerThreshold, bankThickness, app),
+        ...removeCloseToCorners(edges.bottom, cornerThreshold, bankThickness, app),
+        ...removeCloseToCorners(edges.left, cornerThreshold, bankThickness, app)
     ];
 
+    // Draw bank edges
     const firstPoint = allEdgePoints[0];
     const firstMidx = (firstPoint.x + allEdgePoints[1].x) / 2;
     const firstMidy = (firstPoint.y + allEdgePoints[1].y) / 2;
@@ -86,34 +151,25 @@ const createBank = (app, bankThickness) => {
     bank.zIndex = 2;
     app.stage.addChild(bank);
 
-    // Create a single graphics object for all grass
+    // Create grass
     const grassContainer = new PIXI.Graphics();
     grassContainer.zIndex = 11;
-    // Density is based on screen size
-    const grassDensity = Math.floor(app.screen.width * app.screen.height / 100);
+    const grassDensity = Math.floor(screenWidth * screenHeight * BANK_CONFIG.GRASS.DENSITY_FACTOR);
 
-    // Helper function to get random green shade
-    const getRandomGreenShade = () => {
-        const colors = [
-            0x345511, // Base green
-            0x4A7A1E, // Lighter green
-            0x2D4A0F, // Darker green
-            0x5C8A32, // Olive green
-            0x3B6619  // Forest green
-        ];
-        return colors[Math.floor(Math.random() * colors.length)];
-    };
-
-    // Draw all grass blades in one go
+    // Draw grass
     for (let i = 0; i < grassDensity; i++) {
-        let x = Math.random() * app.screen.width;
-        let y = Math.random() * app.screen.height;
+        const x = Math.random() * screenWidth;
+        const y = Math.random() * screenHeight;
 
         if (!isInsidePond(x, y, allEdgePoints)) {
-            const height = 3 + Math.random() * 4;
-            const angle = -0.2 + Math.random() * 0.4;
+            const height = screenHeight * (BANK_CONFIG.GRASS.MIN_HEIGHT +
+                Math.random() * (BANK_CONFIG.GRASS.MAX_HEIGHT - BANK_CONFIG.GRASS.MIN_HEIGHT));
+            const angle = BANK_CONFIG.GRASS.MIN_ANGLE +
+                Math.random() * (BANK_CONFIG.GRASS.MAX_ANGLE - BANK_CONFIG.GRASS.MIN_ANGLE);
 
-            grassContainer.lineStyle(1, getRandomGreenShade(), 0.8);
+            grassContainer.lineStyle(1,
+                BANK_CONFIG.GRASS_COLORS[Math.floor(Math.random() * BANK_CONFIG.GRASS_COLORS.length)],
+                BANK_CONFIG.GRASS.OPACITY);
             grassContainer.moveTo(x, y);
             grassContainer.quadraticCurveTo(
                 x + angle * height * 2,
@@ -128,4 +184,4 @@ const createBank = (app, bankThickness) => {
     return { bank, allEdgePoints };
 };
 
-export { createBank, drawEdges, isInsidePond };
+export { createBank, drawEdges, isInsidePond, BANK_CONFIG };

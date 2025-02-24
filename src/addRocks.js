@@ -3,9 +3,10 @@ import { isInsidePond } from './createBank';
 
 const addRocks = (app, allEdgePoints) => {
     const rocks = [];
-    const minRockSize = 8;
-    const maxRockSize = 15;
-    const numberOfRocks = 500; // Adjust this number for more/less rocks
+    const minRockSize = Math.min(app.screen.width, app.screen.height) * 0.01; // 1% of screen
+    const maxRockSize = Math.min(app.screen.width, app.screen.height) * 0.015; // 1.5% of screen
+    const numberOfRocks = Math.floor((app.screen.width + app.screen.height) * 0.2); // Relative to perimeter
+
 
     // Generate random rocks
     for (let i = 0; i < numberOfRocks; i++) {

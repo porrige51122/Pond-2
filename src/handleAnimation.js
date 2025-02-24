@@ -7,6 +7,11 @@ const handleAnimation = (app, circles, fishes, lilyPads, foods, cohesionFactor, 
         mouseY = event.clientY;
     });
 
+    window.addEventListener('touchmove', (event) => {
+        mouseX = event.touches[0].clientX;
+        mouseY = event.touches[0].clientY;
+    });
+
     app.ticker.add(() => {
         circles.forEach(circle => circle.update(circles, cohesionFactor, alignmentFactor, separationFactor, mouseX, mouseY));
         fishes.forEach(fish => fish.update(foods));
