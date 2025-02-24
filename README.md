@@ -44,10 +44,30 @@ npm install
 
 ## Usage
 
-To start the application, run:
+To start the application in development mode, run:
 
 ```sh
 npm start
 ```
 
 This will launch the PIXI application in your default web browser. You should see various objects (circles, fish, food, and rocks) animated on the screen.
+
+## Build
+
+To create a bundled version of the application for production, run:
+
+```sh
+npm run build
+```
+
+This will create a `docs` folder containing the bundled application.
+
+## Deployment
+
+To deploy the application to GitHub Pages:
+
+1. Commit and push your changes to the `main` branch.
+2. Go to the repository settings on GitHub.
+3. Under the "Pages" section, set the source to the `main` branch and the folder to `/docs`.
+
+Your application will be available at `https://<your-username>.github.io/<your-repository-name>/`.
