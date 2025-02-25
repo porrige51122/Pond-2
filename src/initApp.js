@@ -13,7 +13,7 @@ const separationFactor = 0.07;
 const app = new PIXI.Application({
     width: vw,
     height: vh,
-    backgroundColor: 0x5B85AA,
+    backgroundColor: 0x489191,
     antialias: true
 });
 

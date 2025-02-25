@@ -85,11 +85,19 @@ const createBank = (app, bankThickness) => {
     const screenWidth = app.screen.width;
     const screenHeight = app.screen.height;
     const minScreenDim = Math.min(screenWidth, screenHeight);
+    const shadowOffset = 15; // Match lily pad shadow offset
 
     // Calculate actual values based on screen size
     const variation = minScreenDim * BANK_CONFIG.EDGE_VARIATION;
     const cornerBuffer = minScreenDim * BANK_CONFIG.CORNER_BUFFER;
     const cornerThreshold = minScreenDim * BANK_CONFIG.CORNER_THRESHOLD;
+
+    // Create the shadow first
+    const bankShadow = new PIXI.Graphics();
+    bankShadow.beginFill(0x000000, 0.2); // Match lily pad shadow opacity
+    bankShadow.drawRect(0, 0, screenWidth, screenHeight);
+    bankShadow.zIndex = 9; // Just below the bank
+    bankShadow.beginHole();
 
     const bank = new PIXI.Graphics();
     bank.beginFill(BANK_CONFIG.BASE_COLOR);
@@ -136,6 +144,37 @@ const createBank = (app, bankThickness) => {
         ...removeCloseToCorners(edges.left, cornerThreshold, bankThickness, app)
     ];
 
+    const shadowPoints = allEdgePoints.map(point => {
+        // Calculate center of the pond
+        const centerX = screenWidth / 2;
+        const centerY = screenHeight / 2;
+
+        // Get vector from center to point
+        const dx = point.x - centerX;
+        const dy = point.y - centerY;
+
+        // Calculate distance and normalized vector
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const nx = dx / distance;
+        const ny = dy / distance;
+
+        // Move point slightly inward
+        return {
+            x: point.x - nx * shadowOffset,
+            y: point.y - ny * shadowOffset
+        };
+    });
+
+    // Draw shadow edges
+    const firstShadowPoint = shadowPoints[0];
+    const firstShadowMidx = (firstShadowPoint.x + shadowPoints[1].x) / 2;
+    const firstShadowMidy = (firstShadowPoint.y + shadowPoints[1].y) / 2;
+    bankShadow.moveTo(firstShadowMidx, firstShadowMidy);
+    drawEdges(shadowPoints, bankShadow);
+    bankShadow.closePath();
+    bankShadow.endHole();
+    bankShadow.endFill();
+
     // Draw bank edges
     const firstPoint = allEdgePoints[0];
     const firstMidx = (firstPoint.x + allEdgePoints[1].x) / 2;
@@ -149,6 +188,7 @@ const createBank = (app, bankThickness) => {
     bank.endHole();
     bank.endFill();
     bank.zIndex = 2;
+    app.stage.addChild(bankShadow);
     app.stage.addChild(bank);
 
     // Create grass

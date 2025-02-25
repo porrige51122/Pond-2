@@ -11,9 +11,6 @@ import LilyPad from './objects/LilyPad';
 // Create the bank
 const { bank, allEdgePoints } = createBank(app, bankThickness);
 
-// Create the pond
-createPond(app, bankThickness, allEdgePoints);
-
 // Add rocks on the edge of the bank
 const rocks = addRocks(app, allEdgePoints);
 
@@ -34,13 +31,25 @@ for (let i = 0; i < numberOfCircles; i++) {
 // Create an array to hold the fish
 const fishes = [];
 
+// Define fish colors (using warm, natural fish colors)
+const fishColors = [
+    0xd1b490, // Original beige
+    0xE7A55D, // Golden orange
+    0xC17E3E, // Brown
+    0xFFB6B6, // Salmon pink
+    0xE6CCB3, // Light beige
+    0xB38F6B  // Dark beige
+];
+
+
 // Create fish with varying sizes
 const minFishSize = Math.min(vw, vh) * 0.005; // 0.5% of screen
 const maxFishSize = Math.min(vw, vh) * 0.012; // 1.2% of screen
 const numberOfFish = Math.floor(Math.min(vw, vh) * 0.02); // Number of fish relative to screen size
 
 for (let i = 0; i < numberOfFish; i++) {
-    const fish = new Fish(minFishSize, maxFishSize, 0xd1b490, bankThickness);
+    const randomColor = fishColors[Math.floor(Math.random() * fishColors.length)];
+    const fish = new Fish(minFishSize, maxFishSize, randomColor, bankThickness);
     fish.graphics.zIndex = 1;
     fish.addToStage(app.stage);
     fishes.push(fish);
